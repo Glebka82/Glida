@@ -1,19 +1,6 @@
-import psutil
+import operations
 import os
 import sys
-
-
-def get_removable_drives():
-    """Scans the system and returns a list of connected USB drives."""
-    drives = []
-    for partition in psutil.disk_partitions(all=False):
-        if os.name == 'nt':
-            if 'removable' in partition.opts:
-                drives.append(partition)
-        else:
-            if partition.mountpoint.startswith(('/media/', '/run/media/', '/Volumes/')):
-                drives.append(partition)
-    return drives
 
 
 def burn_image_to_usb(image_path, target_partition):
@@ -84,7 +71,7 @@ def burn_image_to_usb(image_path, target_partition):
 
 if __name__ == "__main__":
     print("🔍 Scanning for available USB drives...\n")
-    available_drives = get_removable_drives()
+    available_drives = operations.get_removable_drives()
 
     if not available_drives:
         print("❌ No USB drives detected. Please plug one in and restart.")
