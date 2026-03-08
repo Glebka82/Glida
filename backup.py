@@ -1,97 +1,111 @@
-import operations
 import os
+import time
+import operations
 import sys
+import subprocess
+import msvcrt
+import ctypes
+
+# Windows Constants
+GENERIC_WRITE = 0x40000000
+GENERIC_READ = 0x80000000
+FILE_SHARE_READ = 0x00000001
+FILE_SHARE_WRITE = 0x00000002
+OPEN_EXISTING = 3
+FSCTL_LOCK_VOLUME = 0x00090018
+FSCTL_DISMOUNT_VOLUME = 0x00090020
 
 
-def burn_image_to_usb(image_path, target_partition):
-    """Bypasses the file system to write an image directly to the physical drive."""
+def ultra_safe_flash(image_path, physical_drive_path):
+    """
+    Uses the Windows Kernel API exclusively to handle the drive.
+    This bypasses Python's file descriptors to avoid Errno 9.
+    """
+    CHUNK_SIZE = 1024 * 1024 * 8  # 8MB for stability
 
-    if not os.path.exists(image_path):
-        print(f"❌ Error: Could not find the image file '{image_path}'")
-        sys.exit(1)
+    print(f"🔗 Opening {physical_drive_path} via Kernel32...")
 
-    # 1. Format the raw hardware path based on the operating system
-    if os.name == 'nt':
-        # Windows requires \\.\ prefix to access physical drives
-        drive_letter = target_partition.device.rstrip('\\')
-        raw_device_path = fr"\\.\{drive_letter}"
-    else:
-        # Linux/macOS use device paths directly (e.g., /dev/sdb1 or /dev/disk2)
-        raw_device_path = target_partition.device
+    # 1. Open the device using Windows API directly
+    handle = ctypes.windll.kernel32.CreateFileW(
+        physical_drive_path,
+        GENERIC_WRITE | GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        None,
+        OPEN_EXISTING,
+        0,
+        None
+    )
 
-    image_size = os.path.getsize(image_path)
-    chunk_size = 4 * 1024 * 1024  # 4 Megabytes per chunk
+    if handle == -1:
+        print("❌ Failed to get a handle. Are you Admin?")
+        return
 
-    # 2. The Safety Catch
-    print("\n" + "!" * 50)
-    print(f"🧨 DANGER ZONE: You are about to overwrite {raw_device_path}")
-    print("!" * 50)
-    print(f"Source Image: {image_path} ({(image_size / (1024 ** 3)):.2f} GB)")
-    print(f"Target Drive: Mounted at {target_partition.mountpoint}")
-    print("\nALL EXISTING DATA ON THIS DRIVE WILL BE PERMANENTLY ERASED.")
-
-    confirm = input("Type 'BURN' to proceed: ")
-    if confirm != 'BURN':
-        print("\nOperation cancelled. No data was changed.")
-        sys.exit(0)
-
-    print("\n🚀 Starting the flashing process...")
-
-    # 3. The Write Loop
     try:
-        # 'rb' = read binary from the image, 'wb' = write binary to the hardware
-        with open(image_path, 'rb') as img_file, open(raw_device_path, 'wb') as usb_drive:
-            bytes_written = 0
+        # 2. Force Lock and Dismount
+        dummy = ctypes.c_ulong()
+        ctypes.windll.kernel32.DeviceIoControl(handle, FSCTL_LOCK_VOLUME, None, 0, None, 0, ctypes.byref(dummy), None)
+        ctypes.windll.kernel32.DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, None, 0, None, 0, ctypes.byref(dummy),
+                                               None)
 
+        print("🔒 Drive locked. Writing data...")
+
+        with open(image_path, 'rb') as img:
             while True:
-                chunk = img_file.read(chunk_size)
-                if not chunk:
-                    break  # Reached the end of the image file
+                data = img.read(CHUNK_SIZE)
+                if not data:
+                    break
 
-                usb_drive.write(chunk)
-                bytes_written += len(chunk)
+                # 3. Write using the Windows WriteFile API
+                written = ctypes.c_ulong(0)
+                success = ctypes.windll.kernel32.WriteFile(
+                    handle, data, len(data), ctypes.byref(written), None
+                )
 
-                # Dynamic progress calculation
-                percent = (bytes_written / image_size) * 100
-                mb_written = bytes_written / (1024 ** 2)
+                if not success:
+                    error_code = ctypes.windll.kernel32.GetLastError()
+                    print(f"\n❌ Write failed at byte {img.tell()}. Windows Error: {error_code}")
+                    return
 
-                # \r animates the progress bar on a single line
-                print(f"\r⏳ Flashing: {percent:.1f}% ({mb_written:.1f} MB written)", end="")
+                print("⚡", end="", flush=True)
 
-        print(f"\n\n✅ Success! The image has been loaded onto {raw_device_path}")
+        print("\n✅ Flash Successful!")
 
-    except PermissionError:
-        print("\n\n❌ PERMISSION DENIED!")
-        print("Bypassing the file system requires elevated privileges.")
-        print("Please restart your terminal as Administrator (Windows) or use 'sudo' (Mac/Linux).")
-    except OSError as e:
-        print(f"\n\n❌ Hardware/OS Error: {e}")
-        print("Ensure no other programs (like File Explorer) are currently viewing the USB drive.")
+    finally:
+        # 4. Clean up
+        ctypes.windll.kernel32.CloseHandle(handle)
 
+# --- USAGE ---
+# Windows Example (Remember to run IDE/Terminal as Admin!):
+# flash_usb_hyper_fast("E:/base_templates/ubuntu_server.img", "\\\\.\\PhysicalDrive1")
 
+# Linux Example (Remember to run with sudo!):
+# flash_usb_hyper_fast("/home/user/base_templates/ubuntu_server.img", "/dev/sdb")
 if __name__ == "__main__":
-    print("🔍 Scanning for available USB drives...\n")
-    available_drives = operations.get_removable_drives()
+    # print("🔍 Scanning for available USB drives...\n")
+    # available_drives = operations.get_removable_drives()
+    #
+    # if not available_drives:
+    #     print("❌ No USB drives detected. Please plug one in and restart.")
+    #     sys.exit(0)
+    #
+    # print("Select the TARGET USB drive:")
+    # for i, drive in enumerate(available_drives):
+    #     print(f" [{i}] {drive.device} (Mounted at: {drive.mountpoint})")
+    #
+    # try:
+    #     choice = int(input("\nEnter the number of the target drive: "))
+    #     if choice < 0 or choice >= len(available_drives):
+    #         print("❌ Invalid selection.")
+    #         sys.exit(1)
+    #
+    #     selected_drive = available_drives[choice]
+    #
+    #     image_file = input("\nEnter the full path to your .img or .iso file: ")
+    #
+    #     burn_image_to_usb(image_file, selected_drive)
+    #
+    # except ValueError:
+    #     print("❌ Please enter a valid number.")
+    ultra_safe_flash(r"C:\work\Glida\usb_backup_0.img", r"\\.\PhysicalDrive1")
 
-    if not available_drives:
-        print("❌ No USB drives detected. Please plug one in and restart.")
-        sys.exit(0)
 
-    print("Select the TARGET USB drive:")
-    for i, drive in enumerate(available_drives):
-        print(f" [{i}] {drive.device} (Mounted at: {drive.mountpoint})")
-
-    try:
-        choice = int(input("\nEnter the number of the target drive: "))
-        if choice < 0 or choice >= len(available_drives):
-            print("❌ Invalid selection.")
-            sys.exit(1)
-
-        selected_drive = available_drives[choice]
-
-        image_file = input("\nEnter the full path to your .img or .iso file: ")
-
-        burn_image_to_usb(image_file, selected_drive)
-
-    except ValueError:
-        print("❌ Please enter a valid number.")

@@ -1,0 +1,22 @@
+{
+  "bar" : [
+    "VMS1",
+    "VMS2"
+  ],
+  "su" : [
+    "VMS1",
+    "VMS2"
+  ],
+  "bz" : [
+    "FAT32",
+    "VMS"
+  ],
+  "ra" : [
+    "FAT32",
+    "VMS"
+  ],
+  "Disk" : [
+    "GLEB (D:)",
+    "VMS"
+  ]
+}
