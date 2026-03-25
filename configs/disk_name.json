@@ -2,26 +2,26 @@
   "bar" : {
       "usb_label1": "VHS1",
       "usb_label2": "VHS2",
-      "image_folder": "./source_images/image_bar"
+      "image_folder": "C:/work/Glida/source_images/image_bar.iso"
     },
   "su" : {
       "usb_label1": "VHS1",
       "usb_label2": "VHS2",
-      "image_folder": "./source_images/image_su"
+      "image_folder": "C:/work/Glida/source_images/image_su.iso"
     },
   "bz" : {
       "usb_label1": "FAT32",
       "usb_label2": "VHS",
-      "image_folder": "./source_images/image_bz"
+      "image_folder": "C:/work/Glida/source_images/image_bz.iso"
     },
   "ra" : {
       "usb_label1": "FAT32",
       "usb_label2": "VHS",
-      "image_folder": "./source_images/image_ra"
+      "image_folder": "C:/work/Glida/source_images/image_ra.iso"
     },
   "Disk" : {
       "usb_label1": "FFlash",
       "usb_label2": "VHS",
-      "image_folder": "./source_images/image_disk"
+      "image_folder": "C:/work/Glida/source_images/image_disk.iso"
     }
 }

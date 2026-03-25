@@ -4,6 +4,7 @@ import math
 import json
 import os
 import core.operations as operations
+import core.deploy_usb as deploy_usb
 from datetime import datetime
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -21,7 +22,8 @@ OVERLAY_BG = "#2a2e30"
 FOOTER_BG = "#232829"
 TOGGLE_ON = "#3daa98"
 TOGGLE_OFF = "#6b7578"
-
+MAIN_FLASH_ATTRIBUTE = 'usb_label1'
+IMAGE_PATH_ATTRIBUTE = 'image_folder'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper: Rounded Rectangle on Canvas
@@ -334,16 +336,12 @@ class IceCreamApp:
             canvas.itemconfig(btn_bg, fill=TEAL)
 
         def on_click(e):
-            platform = text
-            # self._start_making_ice_cream(text)
-            drive_name = operations.get_first_user_from_disk(platform)
-            print(drive_name)
-            target_drive = operations.find_drive_from_ui_string(drive_name)
-
-            if target_drive:
-                print(f"🚀 Ready to send {target_drive} to the flashing function!")
-            # subprocess.run([sys.executable, "backup.py"])
             self._start_making_ice_cream(text)
+            platform = text
+            drive_name = operations.get_attribute_from_disk(platform, MAIN_FLASH_ATTRIBUTE)
+            print(drive_name)
+            iso_path = operations.get_attribute_from_disk(platform, IMAGE_PATH_ATTRIBUTE)
+            deploy_usb.deploy_to_usb(drive_name, iso_path)
 
         canvas.bind("<Enter>", on_enter)
         canvas.bind("<Leave>", on_leave)

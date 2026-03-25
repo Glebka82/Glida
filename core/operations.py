@@ -4,7 +4,7 @@ import json
 import subprocess
 import re
 
-json_path_platform = "configs/disk_name.json"
+json_path_platform = "./configs/disk_name.json"
 
 def get_removable_drives():
     drives = []
@@ -22,10 +22,6 @@ import subprocess
 
 
 def find_drive_from_ui_string(drive_string):
-    """
-    Extracts the drive letter from a string like "GLEB (D:)"
-    and finds the raw PhysicalDrive path.
-    """
     print(f"🔍 Analyzing input string: '{drive_string}'...")
 
     # 1. The Regex Magic
@@ -66,20 +62,19 @@ def find_drive_from_ui_string(drive_string):
         print(f"❌ Error querying Windows for Drive {letter}:. Is the USB plugged in?")
         return None
 
-def get_first_user_from_disk(disk_name):
+def get_attribute_from_disk(disk_name, attribute):
     try:
         with open(json_path_platform, 'r', encoding='utf-8') as file:
-
             data = json.load(file)
 
-            first_user = data[disk_name][0]
+            attribute = data[disk_name][attribute]
 
-            print(f"✅ Found user '{first_user}' on {disk_name}")
-            return first_user
+            print(f"✅ Found USB label '{attribute}' for {disk_name}")
+            return attribute
 
     except FileNotFoundError:
         print(f"❌ Error: The file {json_path_platform} was not found.")
     except KeyError:
-        print(f"❌ Error: The key '{disk_name}' does not exist in the JSON.")
-    except IndexError:
-        print(f"❌ Error: The list for '{disk_name}' is empty!")
+        print(f"❌ Error: Either '{disk_name}' or 'usb_label' does not exist in the JSON.")
+    except Exception as e:
+        print(f"❌ An unexpected error occurred: {e}")
