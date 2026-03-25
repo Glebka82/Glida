@@ -29,9 +29,6 @@ def load_file_to_usb(source_file_path, usb_mount_point):
         print(f"❌ Failed to copy file: {e}")
 
 
-# --- How you call it in your code ---
-# load_file_to_usb("E:/as/dfgds/sfds/aa.pig", "G:/")
-
 if __name__ == "__main__":
     print("🔍 Scanning for available USB drives...\n")
     available_drives = operations.get_removable_drives()

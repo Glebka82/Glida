@@ -3,10 +3,8 @@ from tkinter import ttk
 import math
 import json
 import os
+import core.operations as operations
 from datetime import datetime
-import sys
-import subprocess
-import operations
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Color Palette (matching the design)
@@ -345,7 +343,7 @@ class IceCreamApp:
             if target_drive:
                 print(f"🚀 Ready to send {target_drive} to the flashing function!")
             # subprocess.run([sys.executable, "backup.py"])
-
+            self._start_making_ice_cream(text)
 
         canvas.bind("<Enter>", on_enter)
         canvas.bind("<Leave>", on_leave)
@@ -662,10 +660,10 @@ class IceCreamApp:
 
         self.toggles = {}
         toggle_items = [
-            ("פצפוצי שוקולד", True,  "הוספת פצפוצי שוקולד על הגלידה"),
-            ("פצפוצי וניל", True,   "הוספת פצפוצי וניל על הגלידה"),
+            ("פצפוצי שוקולד", False,  "הוספת פצפוצי שוקולד על הגלידה"),
+            ("פצפוצי וניל", False,   "הוספת פצפוצי וניל על הגלידה"),
             ("מקופלת", False,        "הוספת חתיכות מקופלת"),
-            ("קורנפלקס", True,      "הוספת קורנפלקס פריך"),
+            ("קורנפלקס", False,      "הוספת קורנפלקס פריך"),
             ("תותים", False,         "הוספת תותים טריים"),
         ]
 
@@ -761,7 +759,10 @@ class IceCreamApp:
         order_canvas.config(cursor="hand2")
 
     def _save_order_to_json(self):
-        """Save the current order configuration to a JSON file."""
+        """
+        Save the current order configuration.
+        Creates the file if it doesn't exist; overwrites it if it does.
+        """
         order_data = {
             "timestamp": datetime.now().isoformat(),
             "flavor": self.selected_flavor,
@@ -774,25 +775,22 @@ class IceCreamApp:
         for name, toggle in self.toggles.items():
             order_data["toppings"][name] = toggle.get()
 
-        # Determine path: save next to the script file
+        # Determine path
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(script_dir, "ice_cream_orders.json")
+        json_path = os.path.join(script_dir, "config.json")
 
-        # Load existing orders or start fresh
-        orders = []
-        if os.path.exists(json_path):
-            try:
-                with open(json_path, "r", encoding="utf-8") as f:
-                    orders = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                orders = []
+        try:
+            # 'w' mode:
+            # 1. Creates the file if it's missing.
+            # 2. Empties the file if it exists (Overwrites).
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(order_data, f, ensure_ascii=False, indent=2)
 
-        orders.append(order_data)
+            self._last_json_path = json_path
 
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(orders, f, ensure_ascii=False, indent=2)
-
-        self._last_json_path = json_path
+        except IOError as e:
+            # This usually only happens if the script lacks folder permissions
+            print(f"Error: Could not create or write to {json_path}. {e}")
 
     # ──────────────────────────────────────────────────────────────────────
     # Screen 4: Order Success Popup
@@ -877,6 +875,191 @@ class IceCreamApp:
             canvas.tag_bind(item, "<Enter>", confirm_enter)
             canvas.tag_bind(item, "<Leave>", confirm_leave)
             canvas.tag_bind(item, "<Button-1>", confirm_click)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Error Popup 1: Invalid Ice Cream Type (Warning)
+    # ──────────────────────────────────────────────────────────────────────
+    def _show_invalid_ice_cream_type_error(self):
+        """
+        Show a warning popup indicating the selected ice cream type is invalid.
+        Displays a teal warning triangle icon, title, description,
+        and two buttons: 'סיים' (Finish) and 'בצע שינוי' (Make Change).
+        'סיים' closes the popup. 'בצע שינוי' closes the popup and returns
+        to the flavor selection screen.
+        """
+        # Semi-transparent backdrop
+        self._error_backdrop = tk.Frame(self.root, bg=DARK_BG)
+        self._error_backdrop.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._error_backdrop.configure(bg="#1a1e20")
+
+        # Popup overlay
+        popup = tk.Frame(self.root, bg=OVERLAY_BG)
+        popup.place(relx=0.5, rely=0.5, anchor="center",
+                    width=400, height=320)
+        self._error_popup = popup
+
+        canvas = tk.Canvas(popup, width=400, height=320,
+                           bg=OVERLAY_BG, highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
+
+        # Background rounded rectangle
+        rounded_rect(canvas, 0, 0, 400, 320, radius=20,
+                     fill=OVERLAY_BG, outline="#3a3e40")
+
+        # ── Warning Triangle Icon ──
+        # Outer triangle (teal)
+        cx, cy = 200, 65
+        tri_size = 42
+        canvas.create_polygon(
+            cx, cy - tri_size,
+            cx - tri_size, cy + tri_size * 0.6,
+            cx + tri_size, cy + tri_size * 0.6,
+            fill="", outline=TEAL, width=4, smooth=False
+        )
+        # Inner circle background for "!"
+        canvas.create_oval(cx - 15, cy - 12, cx + 15, cy + 18,
+                           fill="", outline="")
+        # Exclamation mark
+        canvas.create_text(cx, cy + 2, text="!",
+                           font=("Arial", 26, "bold"), fill=TEAL)
+
+        # ── Title: "סוג הגלידה לא תקין" ──
+        canvas.create_text(200, 135, text="סוג הגלידה לא תקין",
+                           font=("Arial", 20, "bold"), fill=WHITE)
+
+        # ── Description lines ──
+        canvas.create_text(200, 170, text=".ישנה בעיה עם סוג הגלידה שנבחר",
+                           font=("Arial", 13), fill=LIGHT_GRAY)
+        canvas.create_text(200, 195, text="אנא בדוק את הבחירה שלך",
+                           font=("Arial", 13), fill=LIGHT_GRAY)
+
+        # ── "סיים" (Finish) Button - RIGHT side ──
+        finish_bg = rounded_rect(canvas, 210, 235, 360, 285,
+                                 radius=22, fill=TEAL, outline="")
+        finish_text = canvas.create_text(285, 260, text="סיים",
+                                         font=("Arial", 16, "bold"), fill=WHITE)
+
+        def finish_enter(e):
+            canvas.itemconfig(finish_bg, fill=TEAL_LIGHT)
+
+        def finish_leave(e):
+            canvas.itemconfig(finish_bg, fill=TEAL)
+
+        def finish_click(e):
+            self._error_backdrop.place_forget()
+            self._error_backdrop.destroy()
+            self._error_popup.place_forget()
+            self._error_popup.destroy()
+
+        for item in [finish_bg, finish_text]:
+            canvas.tag_bind(item, "<Enter>", finish_enter)
+            canvas.tag_bind(item, "<Leave>", finish_leave)
+            canvas.tag_bind(item, "<Button-1>", finish_click)
+
+        # ── "בצע שינוי" (Make Change) Button - LEFT side ──
+        change_bg = rounded_rect(canvas, 40, 235, 195, 285,
+                                 radius=22, fill=TEAL, outline="")
+        change_text = canvas.create_text(117, 260, text="בצע שינוי",
+                                         font=("Arial", 16, "bold"), fill=WHITE)
+
+        def change_enter(e):
+            canvas.itemconfig(change_bg, fill=TEAL_LIGHT)
+
+        def change_leave(e):
+            canvas.itemconfig(change_bg, fill=TEAL)
+
+        def change_click(e):
+            self._error_backdrop.place_forget()
+            self._error_backdrop.destroy()
+            self._error_popup.place_forget()
+            self._error_popup.destroy()
+            self.bottom_buttons_frame.pack_forget()
+            self._show_flavor_selection()
+
+        for item in [change_bg, change_text]:
+            canvas.tag_bind(item, "<Enter>", change_enter)
+            canvas.tag_bind(item, "<Leave>", change_leave)
+            canvas.tag_bind(item, "<Button-1>", change_click)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Error Popup 2: Ice Cream Preparation Failure (Critical Error)
+    # ──────────────────────────────────────────────────────────────────────
+    def _show_ice_cream_preparation_error(self, config_name="פצפוצי שוקולד"):
+        """
+        Show a critical error popup indicating an ice cream preparation failure.
+        Displays a red X icon, title, a dynamic description with the missing
+        configuration name, and a single red 'סגור' (Close) button.
+
+        Parameters:
+            config_name (str): The name of the missing configuration
+                               (default: 'פצפוצי שוקולד').
+        """
+        ERROR_RED = "#e07055"
+        ERROR_RED_HOVER = "#e88a72"
+        ERROR_RED_DARK = "#8b3a2a"
+
+        # Semi-transparent backdrop
+        self._error_backdrop = tk.Frame(self.root, bg=DARK_BG)
+        self._error_backdrop.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._error_backdrop.configure(bg="#1a1e20")
+
+        # Popup overlay
+        popup = tk.Frame(self.root, bg=OVERLAY_BG)
+        popup.place(relx=0.5, rely=0.5, anchor="center",
+                    width=400, height=300)
+        self._error_popup = popup
+
+        canvas = tk.Canvas(popup, width=400, height=300,
+                           bg=OVERLAY_BG, highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
+
+        # Background rounded rectangle
+        rounded_rect(canvas, 0, 0, 400, 300, radius=20,
+                     fill=OVERLAY_BG, outline="#3a3e40")
+
+        # ── Red X Icon ──
+        cx, cy = 200, 55
+        # Outer metallic circle
+        canvas.create_oval(cx - 30, cy - 30, cx + 30, cy + 30,
+                           fill="#5a5a5a", outline="#888888", width=3)
+        # Inner dark circle
+        canvas.create_oval(cx - 24, cy - 24, cx + 24, cy + 24,
+                           fill="#3a3a3a", outline="")
+        # Red X mark
+        canvas.create_text(cx, cy, text="\u2716",
+                           font=("Arial", 28, "bold"), fill=ERROR_RED)
+
+        # ── Title: "תקלה בהכנת גלידה" ──
+        canvas.create_text(200, 115, text="תקלה בהכנת גלידה",
+                           font=("Arial", 20, "bold"), fill=WHITE)
+
+        # ── Description with dynamic config name ──
+        desc_text = f"הקונפיגורציה {config_name} לא נמצאה"
+        canvas.create_text(200, 155, text=desc_text,
+                           font=("Arial", 13), fill=LIGHT_GRAY)
+
+        # ── "סגור" (Close) Button ──
+        close_bg = rounded_rect(canvas, 60, 195, 340, 250,
+                                radius=22, fill=ERROR_RED, outline="")
+        close_text = canvas.create_text(200, 222, text="סגור",
+                                        font=("Arial", 18, "bold"), fill=WHITE)
+
+        def close_enter(e):
+            canvas.itemconfig(close_bg, fill=ERROR_RED_HOVER)
+
+        def close_leave(e):
+            canvas.itemconfig(close_bg, fill=ERROR_RED)
+
+        def close_click(e):
+            self._error_backdrop.place_forget()
+            self._error_backdrop.destroy()
+            self._error_popup.place_forget()
+            self._error_popup.destroy()
+
+        for item in [close_bg, close_text]:
+            canvas.tag_bind(item, "<Enter>", close_enter)
+            canvas.tag_bind(item, "<Leave>", close_leave)
+            canvas.tag_bind(item, "<Button-1>", close_click)
 
     def _animate_success_dots(self):
         """Cycle through the 5 dots on the success popup."""

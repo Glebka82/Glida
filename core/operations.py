@@ -4,7 +4,7 @@ import json
 import subprocess
 import re
 
-json_path_platform = "disk_name.json"
+json_path_platform = "configs/disk_name.json"
 
 def get_removable_drives():
     drives = []
