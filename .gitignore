@@ -3,3 +3,4 @@
 *.img
 .__pycache__/
 .source_images/
+.core/__pycache__/
