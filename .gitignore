@@ -1,6 +1,6 @@
 .venv/
 .idea/
 *.img
-.__pycache__/
-.source_images/
-.core/__pycache__/
+.__pycache__/*
+.source_images/*
+.core/__pycache__/*
