@@ -1,0 +1,16 @@
+# --- Core GUI & System ---
+# ttk is built into tkinter, but we list psutil for hardware discovery
+psutil>=5.9.0
+
+# --- Disk & ISO Management ---
+# Handles the creation of ISO images with Joliet/Rock Ridge support
+pycdlib>=1.12.0
+
+# --- Utilities ---
+# For handling JSON configurations and OS-level operations
+# (These are standard library, but listed here for documentation)
+# os
+# json
+# subprocess
+# threading
+# shutil

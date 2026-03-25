@@ -84,4 +84,4 @@ def create_iso_from_folder(source_dir, output_iso_path):
 
 # Run the function
 if __name__ == '__main__':
-    create_iso_from_folder("E:/", "pic.iso")
+    create_iso_from_folder("E:/", "disk.iso")

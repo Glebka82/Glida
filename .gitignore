@@ -2,3 +2,4 @@
 .idea/
 *.img
 .__pycache__/
+.source_images/

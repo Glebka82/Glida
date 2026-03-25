@@ -1,22 +1,27 @@
 {
-  "bar" : [
-    "VMS1",
-    "VMS2"
-  ],
-  "su" : [
-    "VMS1",
-    "VMS2"
-  ],
-  "bz" : [
-    "FAT32",
-    "VMS"
-  ],
-  "ra" : [
-    "FAT32",
-    "VMS"
-  ],
-  "Disk" : [
-    "FFlash (E:)",
-    "VMS"
-  ]
+  "bar" : {
+      "usb_label1": "VHS1",
+      "usb_label2": "VHS2",
+      "image_folder": "./source_images/image_bar"
+    },
+  "su" : {
+      "usb_label1": "VHS1",
+      "usb_label2": "VHS2",
+      "image_folder": "./source_images/image_su"
+    },
+  "bz" : {
+      "usb_label1": "FAT32",
+      "usb_label2": "VHS",
+      "image_folder": "./source_images/image_bz"
+    },
+  "ra" : {
+      "usb_label1": "FAT32",
+      "usb_label2": "VHS",
+      "image_folder": "./source_images/image_ra"
+    },
+  "Disk" : {
+      "usb_label1": "FFlash",
+      "usb_label2": "VHS",
+      "image_folder": "./source_images/image_disk"
+    }
 }
